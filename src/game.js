@@ -3,12 +3,12 @@ var context = canvas.getContext("2d");
 var game, snake, food;
 
 game = {
-  
+
   score: 0,
   fps: 8,
   over: false,
   message: null,
-  
+
   start: function() {
     game.over = false;
     game.message = null;
@@ -17,12 +17,12 @@ game = {
     snake.init();
     food.set();
   },
-  
+
   stop: function() {
     game.over = true;
-    game.message = 'GAME OVER - PRESS SPACEBAR';
+    game.message = "GAME OVER - PRESS SPACEBAR";
   },
-  
+
   drawBox: function(x, y, size, color) {
     context.fillStyle = color;
     context.beginPath();
@@ -33,50 +33,50 @@ game = {
     context.closePath();
     context.fill();
   },
-  
+
   drawScore: function() {
-    context.fillStyle = '#999';
-    context.font = (canvas.height) + 'px Impact, sans-serif';
-    context.textAlign = 'center';
-    context.fillText(game.score, canvas.width / 2, canvas.height * 0.9);
+    var element = document.getElementById("score");
+    element.style.textAlign = 'center';
+    element.style.display = 'block';
+    element.style.fontSize = 'x-large';
+    element.style.fontWeight = "bold";
+    element.innerHTML = "Score : " + game.score;
   },
-  
+
   drawMessage: function() {
-    if (game.message !== null) {
-      context.fillStyle = '#00F';
-      context.strokeStyle = '#FFF';
-      context.font = (canvas.height / 10) + 'px Impact';
-      context.textAlign = 'center';
-      context.fillText(game.message, canvas.width / 2, canvas.height / 2);
-      context.strokeText(game.message, canvas.width / 2, canvas.height / 2);
-    }
+    context.fillStyle = '#00F';
+    context.strokeStyle = '#FFF';
+    context.font = (canvas.height / 20) + 'px Impact';
+    context.textAlign = 'center';
+    context.fillText(game.message, canvas.width / 2, canvas.height / 2);
+    context.strokeText(game.message, canvas.width / 2, canvas.height / 2);
   },
-  
+
   resetCanvas: function() {
     context.clearRect(0, 0, canvas.width, canvas.height);
   }
-  
+
 };
 
 snake = {
-  
+
   size: canvas.width / 40,
   x: null,
   y: null,
-  color: '#0F0',
+  color: '#09c72b',
   direction: 'left',
   sections: [],
-  
+
   init: function() {
     snake.sections = [];
     snake.direction = 'left';
     snake.x = canvas.width / 2 + snake.size / 2;
     snake.y = canvas.height / 2 + snake.size / 2;
     for (var i = snake.x + (5 * snake.size); i >= snake.x; i -= snake.size) {
-      snake.sections.push(i + ',' + snake.y); 
+      snake.sections.push(i + ',' + snake.y);
     }
   },
-  
+
   move: function() {
     switch (snake.direction) {
       case 'up':
@@ -96,23 +96,23 @@ snake = {
     snake.checkGrowth();
     snake.sections.push(snake.x + ',' + snake.y);
   },
-  
+
   draw: function() {
     for (var i = 0; i < snake.sections.length; i++) {
       snake.drawSection(snake.sections[i].split(','));
-    }    
+    }
   },
-  
+
   drawSection: function(section) {
     game.drawBox(parseInt(section[0]), parseInt(section[1]), snake.size, snake.color);
   },
-  
+
   checkCollision: function() {
     if (snake.isCollision(snake.x, snake.y) === true) {
       game.stop();
     }
   },
-  
+
   isCollision: function(x, y) {
     if (x < snake.size / 2 ||
         x > canvas.width ||
@@ -122,7 +122,7 @@ snake = {
       return true;
     }
   },
-  
+
   checkGrowth: function() {
     if (snake.x == food.x && snake.y == food.y) {
       game.score++;
@@ -134,26 +134,26 @@ snake = {
       snake.sections.shift();
     }
   }
-  
+
 };
 
 food = {
-  
+
   size: null,
   x: null,
   y: null,
-  color: '#0FF',
-  
+  color: '#00d5ff',
+
   set: function() {
     food.size = snake.size;
     food.x = (Math.ceil(Math.random() * 10) * snake.size * 4) - snake.size / 2;
     food.y = (Math.ceil(Math.random() * 10) * snake.size * 3) - snake.size / 2;
   },
-  
+
   draw: function() {
     game.drawBox(food.x, food.y, food.size, food.color);
   }
-  
+
 };
 
 var inverseDirection = {
@@ -201,11 +201,12 @@ function loop() {
     snake.move();
     food.draw();
     snake.draw();
-    game.drawMessage();
   }
+  else
+    game.drawMessage();
   setTimeout(function() {
     requestAnimationFrame(loop);
-  }, 1000 / game.fps);
+  }, 800/game.fps);
 }
 
 requestAnimationFrame(loop);
