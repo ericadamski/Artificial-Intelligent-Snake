@@ -23,15 +23,21 @@ game = {
     game.message = "GAME OVER - PRESS SPACEBAR";
   },
 
-  drawBox: function(x, y, size, color) {
-    context.fillStyle = color;
+  drawBox: function(x, y, size, color, fill) {
     context.beginPath();
     context.moveTo(x - (size / 2), y - (size / 2));
     context.lineTo(x + (size / 2), y - (size / 2));
     context.lineTo(x + (size / 2), y + (size / 2));
     context.lineTo(x - (size / 2), y + (size / 2));
     context.closePath();
-    context.fill();
+    if (fill) {
+      context.fillStyle = color;
+      context.fill();
+    }
+    else {
+      context.strokeStyle = color;
+      context.stroke();
+    }
   },
 
   drawScore: function() {
@@ -52,6 +58,13 @@ game = {
     context.strokeText(game.message, canvas.width / 2, canvas.height / 2);
   },
 
+  drawGrid: function() {
+    for(var i = snake.size/2; i < canvas.width; i += snake.size){
+      for(var j = snake.size/2; j < canvas.height; j += snake.size)
+        game.drawBox(i,j,snake.size, '#070821', false);
+    }
+  },
+
   resetCanvas: function() {
     context.clearRect(0, 0, canvas.width, canvas.height);
   }
@@ -60,7 +73,7 @@ game = {
 
 snake = {
 
-  size: canvas.width / 40,
+  size: canvas.width / 20,
   x: null,
   y: null,
   color: '#09c72b',
@@ -104,7 +117,7 @@ snake = {
   },
 
   drawSection: function(section) {
-    game.drawBox(parseInt(section[0]), parseInt(section[1]), snake.size, snake.color);
+    game.drawBox(parseInt(section[0]), parseInt(section[1]), snake.size, snake.color, true);
   },
 
   checkCollision: function() {
@@ -146,12 +159,12 @@ food = {
 
   set: function() {
     food.size = snake.size;
-    food.x = (Math.ceil(Math.random() * 10) * snake.size * 4) - snake.size / 2;
-    food.y = (Math.ceil(Math.random() * 10) * snake.size * 3) - snake.size / 2;
+    food.x = (Math.ceil(Math.random() * 5) * snake.size * 4) - snake.size / 2;
+    food.y = (Math.ceil(Math.random() * 5) * snake.size * 3) - snake.size / 2;
   },
 
   draw: function() {
-    game.drawBox(food.x, food.y, food.size, food.color);
+    game.drawBox(food.x, food.y, food.size, food.color, true);
   }
 
 };
@@ -198,6 +211,7 @@ function loop() {
   if (game.over == false) {
     game.resetCanvas();
     game.drawScore();
+    game.drawGrid();
     snake.move();
     food.draw();
     snake.draw();

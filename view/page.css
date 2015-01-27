@@ -14,6 +14,6 @@ p {
 canvas {
   display: block;
   margin: 0 auto;
-  border: 10px solid black;
+  border: 1px solid black;
   background-color: white;
 }
