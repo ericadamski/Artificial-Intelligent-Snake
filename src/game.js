@@ -1,6 +1,49 @@
 var canvas = document.getElementById("the-game");
 var context = canvas.getContext("2d");
-var game, snake, food;
+var game, snake, food, ai;
+
+Movement = {
+  UP: 1,
+  DOWN: 2,
+  LEFT: 3,
+  RIGHT: 4,
+  CONTINUE: -1
+}
+
+Array.prototype.compare = function(obj, fn) {
+  var i = this.length;
+  while (i--) {
+    if (fn(this[i], obj))
+      return true;
+  }
+  return false
+}
+
+Array.prototype.print = function(fn) {
+  var i = this.length;
+  while (i--) {
+    fn(i,this[i]);
+  }
+}
+
+Array.prototype.contains = function(obj) {
+  var i = this.length;
+  while (i--) {
+    if (this[i] === obj) {
+        return true;
+    }
+  }
+  return false;
+}
+
+Array.prototype.map = function(fn){
+  var map = [];
+  for(var i = 0; i < this.length; i++)
+  {
+    map[i] = fn(this[i]);
+  }
+  return map;
+}
 
 game = {
 
@@ -8,19 +51,38 @@ game = {
   fps: 8,
   over: false,
   message: null,
+  board: null,
+  startTime: null,
+  timer: null,
+  paused: false,
+  time: 20,
+  pauseTime: null,
 
   start: function() {
     game.over = false;
     game.message = null;
+    game.pauseTimer = null;
+    game.paused = false;
+    game.time = 20;
     game.score = 0;
     game.fps = 8;
+    game.board = [];
+    game.startTime = Date.now();
     snake.init();
     food.set();
+    game.timer = setInterval(function() {
+      var sec = Math.round(((Date.now() - game.startTime) / 1000) % 60);
+      var min = Math.round(((Date.now() - game.startTime) / 60000) % 60);
+      game.drawTime(min , sec);
+    }, 1000);
+    ai.init();
   },
 
   stop: function() {
     game.over = true;
     game.message = "GAME OVER - PRESS SPACEBAR";
+    clearInterval(game.timer);
+    clearInterval(game.pauseTimer);
   },
 
   drawBox: function(x, y, size, color, fill) {
@@ -49,6 +111,19 @@ game = {
     element.innerHTML = "Score : " + game.score;
   },
 
+  drawTime: function(min, sec) {
+      var element = document.getElementById("time");
+      element.style.textAlign = 'center';
+      element.style.display = 'block';
+      element.style.fontSize = 'x-large';
+      element.style.fontWeight = "bold";
+      if( min < 10 )
+        min = '0' + min;
+      if(sec < 10)
+        sec = '0' + sec;
+      element.innerHTML = "Time : " + min + ":" + sec;
+  },
+
   drawMessage: function() {
     context.fillStyle = '#00F';
     context.strokeStyle = '#FFF';
@@ -59,10 +134,31 @@ game = {
   },
 
   drawGrid: function() {
+    game.board = [];
+    var row = col = 0;
     for(var i = snake.size/2; i < canvas.width; i += snake.size){
-      for(var j = snake.size/2; j < canvas.height; j += snake.size)
+      game.board.push([]);
+      for(var j = snake.size/2; j < canvas.height; j += snake.size){
         game.drawBox(i,j,snake.size, '#070821', false);
+        if(food.x === i && food.y === j){
+          game.board[row].push({x: i, y: j, type: 1});
+        }
+        else if (snake.sections.contains(i + "," + j)){
+          game.board[row].push({x: i, y: j, type: 2});
+        }
+        else{
+          game.board[row].push({x: i, y: j, type: 0});
+        }
+        col++;
+      }
+      row++;
     }
+  },
+
+  printGrid: function() {
+    //console.log(game.board);
+    //console.log(food.getPosition());
+    //console.log(snake.getPosition());
   },
 
   resetCanvas: function() {
@@ -131,9 +227,19 @@ snake = {
         x > canvas.width ||
         y < snake.size / 2 ||
         y > canvas.height ||
-        snake.sections.indexOf(x + ',' + y) >= 0) {
+        snake.sections.indexOf(x + ',' + y) >= 0)
       return true;
+  },
+
+  getPosition: function() {
+    var boardValues = [];
+    for(var i = 0; i < this.sections.length - 1; i++)
+    {
+      var pos = this.sections[i].split(',');
+      boardValues.push(Math.ceil(parseInt(pos[0])/snake.size) +
+        " " + Math.ceil(parseInt(pos[1])/snake.size));
     }
+    return boardValues;
   },
 
   checkGrowth: function() {
@@ -165,8 +271,333 @@ food = {
 
   draw: function() {
     game.drawBox(food.x, food.y, food.size, food.color, true);
+    game.printGrid();
+  },
+
+  getPosition: function() {
+    return [Math.ceil(food.x/snake.size),
+            Math.ceil(food.y/snake.size)];
   }
 
+};
+
+ai = {
+  moveQueue: [],
+  optionalMoves: [],
+  locationOfFood: [],
+  currentDirection: 0,
+  inBFS: false,
+
+  init: function(){
+    this.inBFS = false;
+    this.moveQueue = [];
+    this.locationOfFood = [0,0];
+    this.currentDirection = 0;
+    this.optionalMoves = [];
+  },
+
+  addMove: function(move){
+    this.moveQueue.push(move);
+  },
+
+  BFS: function() {
+
+    var open = [],
+        closed = [];
+    //if( !this.inBFS )
+    //{
+    open.push({pos: Math.ceil(snake.x/snake.size) + "," +
+      Math.ceil(snake.y/snake.size),
+      body: snake.getPosition(),
+      parent: null,
+      move: snake.direction});
+    this.inBFS = true;
+    //}
+
+    var foodPosition = food.getPosition();
+    var foodPos = foodPosition[0] + "," + foodPosition[1];
+
+    var iterations = 0;
+
+    while (open.length !== 0)
+    {
+      var current = open.shift();
+      //console.log(iterations++ + " : " + current.pos);
+      //var print = function(index, element) {
+      //  console.log(index + " : " + element.pos);
+      //};
+      //console.log("open : ");
+      //open.print(print);
+      //if ( current !== undefined && current.length > 0 )
+      //{
+      //  //console.log(game.board);
+      //  var snakeCoords = current.split(',');
+      //  var loc = game.board[snakeCoords[0]][snakeCoords[1]];
+      //  snake.x = loc.x;
+      //  snake.y = loc.y;
+      //}
+      var foodx = parseInt(current.pos.split(",")[0]);
+      var foody = parseInt(current.pos.split(",")[1]);
+
+      if (current.pos === foodPos)
+      {
+        console.log('success'); //success
+        //build reverse tree
+        //console.log("FOOD : " + foodPos);
+        //console.log("MY LOC : " + current.pos);
+        this.addMove(current.move);
+        var curParent = current.parent;
+        while (curParent)
+        {
+          this.addMove(curParent.move);
+          curParent = curParent.parent;
+        }
+        //this.open = [];
+        //this.closed = [];
+        return true;
+      }
+      else
+      {
+        closed.push(current);
+        this.getOptionalMoves(current);
+        var nxtMoves = this.computeNextMoveCoordinates(current);
+
+        //console.log("length of nxt moves : " + nxtMoves.length);
+
+        var comparePosition = function(a, b) {
+          if( a.pos === undefined || b.pos === undefined )
+            return false;
+          else
+            return a.pos === b.pos;
+        }
+
+        for(var i = 0; i < nxtMoves.length; i++)
+        {
+          if( !open.compare(nxtMoves[i], comparePosition) &&
+              !closed.compare(nxtMoves[i], comparePosition) )
+            open.push(nxtMoves[i]);
+        }
+      }
+    }
+    //else
+    //{
+    console.log('failure');
+      //this.open = [];
+      //this.closed = [];
+    return false;
+    //}
+  },
+
+  getOptionalMoves: function(parent){
+    //console.log("get moves " + parent.pos);
+    var positions = snake.getPosition();
+    var par = parent.pos.split(",");
+    var x = parseInt(par[0]);//Math.ceil(snake.x/snake.size);//par[0];
+    var y = parseInt(par[1]);//Math.ceil(snake.y/snake.size);//par[1];
+
+    //console.log("Our position is : x:" + x + ", y:" + y);
+
+    var left  = (x - 1) + " " + y;
+    var right = (x + 1) + " " + y;
+    var up    = x + " " + (y - 1);
+    var down  = x + " " + (y + 1);
+
+    var leftWall  = (x - 1) < 0;
+    var rightWall = (x + 1) > 20;
+    var upWall    = (y - 1) < 0;
+    var downWall  = (y + 1) > 20;
+
+    this.optionalMoves = [];
+    switch (parent.move){
+      case "up":
+        //check left and right
+        if( !positions.contains(left) && !leftWall )
+          this.optionalMoves.push(Movement.LEFT);
+        if( !positions.contains(right) && !rightWall )
+          this.optionalMoves.push(Movement.RIGHT);
+        if( !positions.contains(up) && !upWall )
+          this.optionalMoves.push(Movement.CONTINUE);
+        break;
+
+      case "down":
+        //check left and right
+        if( !positions.contains(left) && !leftWall )
+          this.optionalMoves.push(Movement.LEFT);
+        if( !positions.contains(right) && !rightWall )
+          this.optionalMoves.push(Movement.RIGHT);
+        if( !positions.contains(down) && !downWall )
+          this.optionalMoves.push(Movement.CONTINUE);
+        break;
+
+      case "left":
+        //check up and down
+        if( !positions.contains(up) && !upWall )
+          this.optionalMoves.push(Movement.UP);
+        if( !positions.contains(down) && !downWall )
+          this.optionalMoves.push(Movement.DOWN);
+        if( !positions.contains(left) && !leftWall )
+          this.optionalMoves.push(Movement.CONTINUE);
+        break;
+
+      case "right":
+        //check up and down
+        if( !positions.contains(up) && !upWall )
+          this.optionalMoves.push(Movement.UP);
+        if( !positions.contains(down) && !downWall )
+          this.optionalMoves.push(Movement.DOWN);
+        if( !positions.contains(right) && !rightWall )
+          this.optionalMoves.push(Movement.CONTINUE);
+        break;
+    }
+  },
+
+  computeNextMoveCoordinates: function(parent){
+    //console.log(parent.pos + " compute ");
+    var par = parent.pos.split(",");
+    var x = parseInt(par[0]);
+    var y = parseInt(par[1]);
+
+    var left   = (x - 1) + "," + y;
+    var leftFn = function(element) {
+      var splitElement = element.split(" ");
+      return (parseInt(splitElement[0]) - 1) + " " + parseInt(splitElement[1]);
+    };
+    var right   = (x + 1) + "," + y;
+    var rightFn = function(element) {
+      console.log(element);
+      var splitElement = element.split(" ");
+      return (parseInt(splitElement[0]) + 1) + " " + parseInt(splitElement[1]);
+    };
+    var up    = x + "," + (y - 1);
+    var upFn  = function(element) {
+      var splitElement = element.split(" ");
+      return parseInt(splitElement[0]) + " " + (parseInt(splitElement[1]) - 1);
+    };
+    var down   = x + "," + (y + 1);
+    var downFn = function(element) {
+      var splitElement = element.split(" ");
+      return parseInt(splitElement[0]) + " " + (parseInt(splitElement[1]) + 1);
+    };
+
+    var moves = [];
+
+    console.log("up : " + up + " down : " + down + " left : " + left + " right : " + right);
+    console.log("Optional Moves : " + this.optionalMoves);
+    //console.log(parent.move);
+
+    for(var i = 0; i < this.optionalMoves.length; i++)
+    {
+      switch (this.optionalMoves[i])
+      {
+        case Movement.UP:
+          // up
+          parent.body.push(up.replace(/,/g, " "));
+          moves.push({pos: up,
+            body: parent.body,
+            parent: parent,
+            move: "up"});
+          break;
+        case Movement.DOWN:
+          // down
+          parent.body.push(down.replace(/,/g, " "));
+          moves.push({pos: down,
+            body: parent.body,
+            parent: parent,
+            move: "down"});
+          break;
+        case Movement.LEFT:
+          //left
+          parent.body.push(left.replace(/,/g, " "));
+          moves.push({pos: left,
+            body: parent.body,
+            parent: parent,
+            move: "left"});
+          break;
+        case Movement.RIGHT:
+          //right
+          parent.body.push(right.replace(/,/g, " "));
+          moves.push({pos: right,
+            body: parent.body,
+            parent: parent,
+            move: "right"});
+          break;
+        default:
+          switch (parent.move)
+          {
+            case "up":
+              parent.body.push(up.replace(/,/g, " "));
+              moves.push({pos: up,
+                body: parent.body,
+                parent: parent,
+                move: "up"});
+              break;
+            case "down":
+              parent.body.push(down.replace(/,/g, " "));
+              moves.push({pos: down,
+                body: parent.body,
+                parent: parent,
+                move: "down"});
+              break;
+            case "left":
+              parent.body.push(left.replace(/,/g, " "));
+              moves.push({pos: left,
+                body: parent.body.map(leftFn),
+                parent: parent,
+                move: "left"});
+              break;
+            case "right":
+              parent.body.push(right.replace(/,/g, " "));
+              moves.push({pos: right,
+                body: parent.body.map(rightFn),
+                parent: parent,
+                move: "right"});
+              break;
+          }
+          break;
+      }
+      parent.body.shift();
+    }
+    return moves;
+  },
+
+  computeRandomNextMove: function(){
+    this.getOptionalMoves({pos: Math.ceil(snake.x/snake.size) + "," + Math.ceil(snake.y/snake.size)});
+    var num = Math.ceil(( Math.random() * this.optionalMoves.length ));
+
+    switch (this.optionalMoves[num - 1]) {
+      case Movement.UP:
+        return "up";
+        break;
+
+      case Movement.DOWN:
+        return "down";
+        break;
+
+      case Movement.LEFT:
+        return "left";
+        break;
+
+      case Movement.RIGHT:
+        return "right";
+        break;
+
+      default:
+        return snake.direction;
+        break;
+    }
+  },
+
+  setFoodLocation: function(x, y){
+    this.locationOfFood[0] = x;
+    this.locationOfFood[1] = y;
+  },
+
+  doMove: function(snake){
+    if (this.moveQueue.length !== 0)
+      snake.direction = this.moveQueue.pop();
+    else
+      this.inBFS = false;
+  }
 };
 
 var inverseDirection = {
@@ -193,34 +624,49 @@ function getKey(value){
   return null;
 }
 
+function togglePause() {
+  if (!game.paused){
+    clearInterval(game.pauseTimer);
+    game.paused = true;
+  } else {
+    game.pauseTimer = setTimeout(function() {
+      requestAnimationFrame(loop);
+    }, 1000/game.fps);
+    game.paused = false;
+  }
+}
+
 addEventListener("keydown", function (e) {
-    var lastKey = getKey(e.keyCode);
-    if (['up', 'down', 'left', 'right'].indexOf(lastKey) >= 0
-        && lastKey != inverseDirection[snake.direction]) {
-      snake.direction = lastKey;
-    } else if (['start_game'].indexOf(lastKey) >= 0 && game.over) {
-      game.start();
-    }
+  var lastKey = getKey(e.keyCode);
+  if (['up', 'down', 'left', 'right'].indexOf(lastKey) >= 0
+      && lastKey != inverseDirection[snake.direction]) {
+    snake.direction = lastKey;
+  } else if (['start_game'].indexOf(lastKey) >= 0 && game.over) {
+    game.start();
+    ai.BFS();
+  } else if (['start_game'].indexOf(lastKey) >= 0 && !game.over) {
+    togglePause();
+  }
 }, false);
 
 var requestAnimationFrame = window.requestAnimationFrame ||
-      window.webkitRequestAnimationFrame ||
-      window.mozRequestAnimationFrame;
+                            window.webkitRequestAnimationFrame ||
+                            window.mozRequestAnimationFrame;
 
 function loop() {
   if (game.over == false) {
     game.resetCanvas();
     game.drawScore();
     game.drawGrid();
+    if( !ai.inBFS ) ai.BFS();
+    ai.doMove(snake);
     snake.move();
     food.draw();
     snake.draw();
   }
   else
     game.drawMessage();
-  setTimeout(function() {
+  game.pauseTimer = setTimeout(function() {
     requestAnimationFrame(loop);
-  }, 800/game.fps);
+  }, 1000/game.fps);
 }
-
-requestAnimationFrame(loop);
