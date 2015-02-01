@@ -11,6 +11,10 @@ h1 {
 p {
   text-align: center;
 }
+#search{
+  display: block;
+  text-align: center;
+}
 canvas {
   display: block;
   margin: 0 auto;

@@ -111,6 +111,16 @@ game = {
     element.innerHTML = "Score : " + game.score;
   },
 
+  getSearch: function() {
+    var isBFS   = document.getElementById('BFS').checked,
+        isDFS   = document.getElementById('DFS').checked,
+        isAStar = document.getElementById('AStar').checked;
+
+    if (isBFS) return "BFS";
+    if (isDFS) return "DFS";
+    if (isAStar) return "A*";
+  },
+
   drawTime: function(min, sec) {
       var element = document.getElementById("time");
       element.style.textAlign = 'center';
@@ -286,10 +296,10 @@ ai = {
   optionalMoves: [],
   locationOfFood: [],
   currentDirection: 0,
-  inBFS: false,
+  inSearch: false,
 
   init: function(){
-    this.inBFS = false;
+    this.inSearch = false;
     this.moveQueue = [];
     this.locationOfFood = [0,0];
     this.currentDirection = 0;
@@ -300,51 +310,29 @@ ai = {
     this.moveQueue.push(move);
   },
 
-  BFS: function() {
+  DFS: function() {
 
     var open = [],
         closed = [];
-    //if( !this.inBFS )
-    //{
+
     open.push({pos: Math.ceil(snake.x/snake.size) + "," +
       Math.ceil(snake.y/snake.size),
       body: snake.getPosition(),
       parent: null,
       move: snake.direction});
-    this.inBFS = true;
-    //}
+    this.inSearch = true;
 
     var foodPosition = food.getPosition();
     var foodPos = foodPosition[0] + "," + foodPosition[1];
 
-    var iterations = 0;
-
     while (open.length !== 0)
     {
-      var current = open.shift();
-      //console.log(iterations++ + " : " + current.pos);
-      //var print = function(index, element) {
-      //  console.log(index + " : " + element.pos);
-      //};
-      //console.log("open : ");
-      //open.print(print);
-      //if ( current !== undefined && current.length > 0 )
-      //{
-      //  //console.log(game.board);
-      //  var snakeCoords = current.split(',');
-      //  var loc = game.board[snakeCoords[0]][snakeCoords[1]];
-      //  snake.x = loc.x;
-      //  snake.y = loc.y;
-      //}
-      var foodx = parseInt(current.pos.split(",")[0]);
-      var foody = parseInt(current.pos.split(",")[1]);
+      var current = open.pop();
 
       if (current.pos === foodPos)
       {
         console.log('success'); //success
         //build reverse tree
-        //console.log("FOOD : " + foodPos);
-        //console.log("MY LOC : " + current.pos);
         this.addMove(current.move);
         var curParent = current.parent;
         while (curParent)
@@ -352,8 +340,6 @@ ai = {
           this.addMove(curParent.move);
           curParent = curParent.parent;
         }
-        //this.open = [];
-        //this.closed = [];
         return true;
       }
       else
@@ -361,8 +347,6 @@ ai = {
         closed.push(current);
         this.getOptionalMoves(current);
         var nxtMoves = this.computeNextMoveCoordinates(current);
-
-        //console.log("length of nxt moves : " + nxtMoves.length);
 
         var comparePosition = function(a, b) {
           if( a.pos === undefined || b.pos === undefined )
@@ -379,18 +363,73 @@ ai = {
         }
       }
     }
-    //else
-    //{
     console.log('failure');
-      //this.open = [];
-      //this.closed = [];
     return false;
-    //}
+  },
+
+  BFS: function() {
+
+    var open = [],
+        closed = [];
+
+    open.push({pos: Math.ceil(snake.x/snake.size) + "," +
+      Math.ceil(snake.y/snake.size),
+      body: snake.getPosition(),
+      parent: null,
+      move: snake.direction});
+    this.inSearch = true;
+
+    var foodPosition = food.getPosition();
+    var foodPos = foodPosition[0] + "," + foodPosition[1];
+
+    while (open.length !== 0)
+    {
+      var current = open.shift();
+
+      console.log("food : " + foodPos);
+
+      if (current.pos === foodPos)
+      {
+        console.log('success'); //success
+        //build reverse tree
+        this.addMove(current.move);
+        var curParent = current.parent;
+        while (curParent)
+        {
+          this.addMove(curParent.move);
+          curParent = curParent.parent;
+        }
+        console.log("exe");
+        return true;
+      }
+      else
+      {
+        closed.push(current);
+        this.getOptionalMoves(current);
+        var nxtMoves = this.computeNextMoveCoordinates(current);
+
+        var comparePosition = function(a, b) {
+          if( a.pos === undefined || b.pos === undefined )
+            return false;
+          else
+            return a.pos === b.pos;
+        }
+
+        for(var i = 0; i < nxtMoves.length; i++)
+        {
+          if( !open.compare(nxtMoves[i], comparePosition) &&
+              !closed.compare(nxtMoves[i], comparePosition) )
+            open.push(nxtMoves[i]);
+        }
+      }
+    }
+    console.log('failure');
+    return false;
   },
 
   getOptionalMoves: function(parent){
     //console.log("get moves " + parent.pos);
-    var positions = snake.getPosition();
+    var positions = parent.body;
     var par = parent.pos.split(",");
     var x = parseInt(par[0]);//Math.ceil(snake.x/snake.size);//par[0];
     var y = parseInt(par[1]);//Math.ceil(snake.y/snake.size);//par[1];
@@ -464,7 +503,6 @@ ai = {
     };
     var right   = (x + 1) + "," + y;
     var rightFn = function(element) {
-      console.log(element);
       var splitElement = element.split(" ");
       return (parseInt(splitElement[0]) + 1) + " " + parseInt(splitElement[1]);
     };
@@ -481,8 +519,8 @@ ai = {
 
     var moves = [];
 
-    console.log("up : " + up + " down : " + down + " left : " + left + " right : " + right);
-    console.log("Optional Moves : " + this.optionalMoves);
+    //console.log("up : " + up + " down : " + down + " left : " + left + " right : " + right);
+    //console.log("Optional Moves : " + this.optionalMoves);
     //console.log(parent.move);
 
     for(var i = 0; i < this.optionalMoves.length; i++)
@@ -541,14 +579,14 @@ ai = {
             case "left":
               parent.body.push(left.replace(/,/g, " "));
               moves.push({pos: left,
-                body: parent.body.map(leftFn),
+                body: parent.body,
                 parent: parent,
                 move: "left"});
               break;
             case "right":
               parent.body.push(right.replace(/,/g, " "));
               moves.push({pos: right,
-                body: parent.body.map(rightFn),
+                body: parent.body,
                 parent: parent,
                 move: "right"});
               break;
@@ -561,7 +599,7 @@ ai = {
   },
 
   computeRandomNextMove: function(){
-    this.getOptionalMoves({pos: Math.ceil(snake.x/snake.size) + "," + Math.ceil(snake.y/snake.size)});
+    //this.getOptionalMoves({pos: Math.ceil(snake.x/snake.size) + "," + Math.ceil(snake.y/snake.size)});
     var num = Math.ceil(( Math.random() * this.optionalMoves.length ));
 
     switch (this.optionalMoves[num - 1]) {
@@ -593,10 +631,14 @@ ai = {
   },
 
   doMove: function(snake){
+    console.log(this.moveQueue.length);
     if (this.moveQueue.length !== 0)
+    {
       snake.direction = this.moveQueue.pop();
+      console.log(snake.direction);
+    }
     else
-      this.inBFS = false;
+      this.inSearch = false;
   }
 };
 
@@ -643,7 +685,6 @@ addEventListener("keydown", function (e) {
     snake.direction = lastKey;
   } else if (['start_game'].indexOf(lastKey) >= 0 && game.over) {
     game.start();
-    ai.BFS();
   } else if (['start_game'].indexOf(lastKey) >= 0 && !game.over) {
     togglePause();
   }
@@ -658,7 +699,22 @@ function loop() {
     game.resetCanvas();
     game.drawScore();
     game.drawGrid();
-    if( !ai.inBFS ) ai.BFS();
+    if( !ai.inSearch )
+    {
+      switch(game.getSearch())
+      {
+        case 'BFS':
+          ai.BFS();
+          break;
+
+        case 'DFS':
+          ai.DFS();
+          break;
+
+        case 'A*':
+          break;
+      }
+    }
     ai.doMove(snake);
     snake.move();
     food.draw();
