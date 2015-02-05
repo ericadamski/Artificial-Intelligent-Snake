@@ -1,6 +1,6 @@
 var canvas = document.getElementById("the-game");
 var context = canvas.getContext("2d");
-var game, snake, food, ai;
+var game, food;
 
 Movement = {
   UP: 1,
@@ -21,9 +21,7 @@ Array.prototype.compare = function(obj, fn) {
 
 Array.prototype.print = function(fn) {
   var i = this.length;
-  while (i--) {
-    fn(i,this[i]);
-  }
+  while (i--) fn(i,this[i]);
 }
 
 Array.prototype.contains = function(obj) {
@@ -177,95 +175,6 @@ game = {
 
 };
 
-snake = {
-
-  size: canvas.width / 20,
-  x: null,
-  y: null,
-  color: '#09c72b',
-  direction: 'left',
-  sections: [],
-
-  init: function() {
-    snake.sections = [];
-    snake.direction = 'left';
-    snake.x = canvas.width / 2 + snake.size / 2;
-    snake.y = canvas.height / 2 + snake.size / 2;
-    for (var i = snake.x + (5 * snake.size); i >= snake.x; i -= snake.size) {
-      snake.sections.push(i + ',' + snake.y);
-    }
-  },
-
-  move: function() {
-    switch (snake.direction) {
-      case 'up':
-        snake.y -= snake.size;
-        break;
-      case 'down':
-        snake.y += snake.size;
-        break;
-      case 'left':
-        snake.x -= snake.size;
-        break;
-      case 'right':
-        snake.x += snake.size;
-        break;
-    }
-    snake.checkCollision();
-    snake.checkGrowth();
-    snake.sections.push(snake.x + ',' + snake.y);
-  },
-
-  draw: function() {
-    for (var i = 0; i < snake.sections.length; i++) {
-      snake.drawSection(snake.sections[i].split(','));
-    }
-  },
-
-  drawSection: function(section) {
-    game.drawBox(parseInt(section[0]), parseInt(section[1]), snake.size, snake.color, true);
-  },
-
-  checkCollision: function() {
-    if (snake.isCollision(snake.x, snake.y) === true) {
-      game.stop();
-    }
-  },
-
-  isCollision: function(x, y) {
-    if (x < snake.size / 2 ||
-        x > canvas.width ||
-        y < snake.size / 2 ||
-        y > canvas.height ||
-        snake.sections.indexOf(x + ',' + y) >= 0)
-      return true;
-  },
-
-  getPosition: function() {
-    var boardValues = [];
-    for(var i = 0; i < this.sections.length - 1; i++)
-    {
-      var pos = this.sections[i].split(',');
-      boardValues.push(Math.ceil(parseInt(pos[0])/snake.size) +
-        " " + Math.ceil(parseInt(pos[1])/snake.size));
-    }
-    return boardValues;
-  },
-
-  checkGrowth: function() {
-    if (snake.x == food.x && snake.y == food.y) {
-      game.score++;
-      if (game.score % 5 == 0 && game.fps < 60) {
-        game.fps++;
-      }
-      food.set();
-    } else {
-      snake.sections.shift();
-    }
-  }
-
-};
-
 food = {
 
   size: null,
@@ -289,357 +198,6 @@ food = {
             Math.ceil(food.y/snake.size)];
   }
 
-};
-
-ai = {
-  moveQueue: [],
-  optionalMoves: [],
-  locationOfFood: [],
-  currentDirection: 0,
-  inSearch: false,
-
-  init: function(){
-    this.inSearch = false;
-    this.moveQueue = [];
-    this.locationOfFood = [0,0];
-    this.currentDirection = 0;
-    this.optionalMoves = [];
-  },
-
-  addMove: function(move){
-    this.moveQueue.push(move);
-  },
-
-  DFS: function() {
-
-    var open = [],
-        closed = [];
-
-    open.push({pos: Math.ceil(snake.x/snake.size) + "," +
-      Math.ceil(snake.y/snake.size),
-      body: snake.getPosition(),
-      parent: null,
-      move: snake.direction});
-    this.inSearch = true;
-
-    var foodPosition = food.getPosition();
-    var foodPos = foodPosition[0] + "," + foodPosition[1];
-
-    while (open.length !== 0)
-    {
-      var current = open.pop();
-
-      if (current.pos === foodPos)
-      {
-        console.log('success'); //success
-        //build reverse tree
-        this.addMove(current.move);
-        var curParent = current.parent;
-        while (curParent)
-        {
-          this.addMove(curParent.move);
-          curParent = curParent.parent;
-        }
-        return true;
-      }
-      else
-      {
-        closed.push(current);
-        this.getOptionalMoves(current);
-        var nxtMoves = this.computeNextMoveCoordinates(current);
-
-        var comparePosition = function(a, b) {
-          if( a.pos === undefined || b.pos === undefined )
-            return false;
-          else
-            return a.pos === b.pos;
-        }
-
-        for(var i = 0; i < nxtMoves.length; i++)
-        {
-          if( !open.compare(nxtMoves[i], comparePosition) &&
-              !closed.compare(nxtMoves[i], comparePosition) )
-            open.push(nxtMoves[i]);
-        }
-      }
-    }
-    console.log('failure');
-    return false;
-  },
-
-  BFS: function() {
-
-    var open = [],
-        closed = [];
-
-    open.push({pos: Math.ceil(snake.x/snake.size) + "," +
-      Math.ceil(snake.y/snake.size),
-      body: snake.getPosition(),
-      parent: null,
-      move: snake.direction});
-    this.inSearch = true;
-
-    var foodPosition = food.getPosition();
-    var foodPos = foodPosition[0] + "," + foodPosition[1];
-
-    while (open.length !== 0)
-    {
-      var current = open.shift();
-
-      console.log("food : " + foodPos);
-
-      if (current.pos === foodPos)
-      {
-        console.log('success'); //success
-        //build reverse tree
-        this.addMove(current.move);
-        var curParent = current.parent;
-        while (curParent)
-        {
-          this.addMove(curParent.move);
-          curParent = curParent.parent;
-        }
-        console.log("exe");
-        return true;
-      }
-      else
-      {
-        closed.push(current);
-        this.getOptionalMoves(current);
-        var nxtMoves = this.computeNextMoveCoordinates(current);
-
-        var comparePosition = function(a, b) {
-          if( a.pos === undefined || b.pos === undefined )
-            return false;
-          else
-            return a.pos === b.pos;
-        }
-
-        for(var i = 0; i < nxtMoves.length; i++)
-        {
-          if( !open.compare(nxtMoves[i], comparePosition) &&
-              !closed.compare(nxtMoves[i], comparePosition) )
-            open.push(nxtMoves[i]);
-        }
-      }
-    }
-    console.log('failure');
-    return false;
-  },
-
-  getOptionalMoves: function(parent){
-    //console.log("get moves " + parent.pos);
-    var positions = parent.body;
-    var par = parent.pos.split(",");
-    var x = parseInt(par[0]);//Math.ceil(snake.x/snake.size);//par[0];
-    var y = parseInt(par[1]);//Math.ceil(snake.y/snake.size);//par[1];
-
-    //console.log("Our position is : x:" + x + ", y:" + y);
-
-    var left  = (x - 1) + " " + y;
-    var right = (x + 1) + " " + y;
-    var up    = x + " " + (y - 1);
-    var down  = x + " " + (y + 1);
-
-    var leftWall  = (x - 1) < 0;
-    var rightWall = (x + 1) > 20;
-    var upWall    = (y - 1) < 0;
-    var downWall  = (y + 1) > 20;
-
-    this.optionalMoves = [];
-    switch (parent.move){
-      case "up":
-        //check left and right
-        if( !positions.contains(left) && !leftWall )
-          this.optionalMoves.push(Movement.LEFT);
-        if( !positions.contains(right) && !rightWall )
-          this.optionalMoves.push(Movement.RIGHT);
-        if( !positions.contains(up) && !upWall )
-          this.optionalMoves.push(Movement.CONTINUE);
-        break;
-
-      case "down":
-        //check left and right
-        if( !positions.contains(left) && !leftWall )
-          this.optionalMoves.push(Movement.LEFT);
-        if( !positions.contains(right) && !rightWall )
-          this.optionalMoves.push(Movement.RIGHT);
-        if( !positions.contains(down) && !downWall )
-          this.optionalMoves.push(Movement.CONTINUE);
-        break;
-
-      case "left":
-        //check up and down
-        if( !positions.contains(up) && !upWall )
-          this.optionalMoves.push(Movement.UP);
-        if( !positions.contains(down) && !downWall )
-          this.optionalMoves.push(Movement.DOWN);
-        if( !positions.contains(left) && !leftWall )
-          this.optionalMoves.push(Movement.CONTINUE);
-        break;
-
-      case "right":
-        //check up and down
-        if( !positions.contains(up) && !upWall )
-          this.optionalMoves.push(Movement.UP);
-        if( !positions.contains(down) && !downWall )
-          this.optionalMoves.push(Movement.DOWN);
-        if( !positions.contains(right) && !rightWall )
-          this.optionalMoves.push(Movement.CONTINUE);
-        break;
-    }
-  },
-
-  computeNextMoveCoordinates: function(parent){
-    //console.log(parent.pos + " compute ");
-    var par = parent.pos.split(",");
-    var x = parseInt(par[0]);
-    var y = parseInt(par[1]);
-
-    var left   = (x - 1) + "," + y;
-    var leftFn = function(element) {
-      var splitElement = element.split(" ");
-      return (parseInt(splitElement[0]) - 1) + " " + parseInt(splitElement[1]);
-    };
-    var right   = (x + 1) + "," + y;
-    var rightFn = function(element) {
-      var splitElement = element.split(" ");
-      return (parseInt(splitElement[0]) + 1) + " " + parseInt(splitElement[1]);
-    };
-    var up    = x + "," + (y - 1);
-    var upFn  = function(element) {
-      var splitElement = element.split(" ");
-      return parseInt(splitElement[0]) + " " + (parseInt(splitElement[1]) - 1);
-    };
-    var down   = x + "," + (y + 1);
-    var downFn = function(element) {
-      var splitElement = element.split(" ");
-      return parseInt(splitElement[0]) + " " + (parseInt(splitElement[1]) + 1);
-    };
-
-    var moves = [];
-
-    //console.log("up : " + up + " down : " + down + " left : " + left + " right : " + right);
-    //console.log("Optional Moves : " + this.optionalMoves);
-    //console.log(parent.move);
-
-    for(var i = 0; i < this.optionalMoves.length; i++)
-    {
-      switch (this.optionalMoves[i])
-      {
-        case Movement.UP:
-          // up
-          parent.body.push(up.replace(/,/g, " "));
-          moves.push({pos: up,
-            body: parent.body,
-            parent: parent,
-            move: "up"});
-          break;
-        case Movement.DOWN:
-          // down
-          parent.body.push(down.replace(/,/g, " "));
-          moves.push({pos: down,
-            body: parent.body,
-            parent: parent,
-            move: "down"});
-          break;
-        case Movement.LEFT:
-          //left
-          parent.body.push(left.replace(/,/g, " "));
-          moves.push({pos: left,
-            body: parent.body,
-            parent: parent,
-            move: "left"});
-          break;
-        case Movement.RIGHT:
-          //right
-          parent.body.push(right.replace(/,/g, " "));
-          moves.push({pos: right,
-            body: parent.body,
-            parent: parent,
-            move: "right"});
-          break;
-        default:
-          switch (parent.move)
-          {
-            case "up":
-              parent.body.push(up.replace(/,/g, " "));
-              moves.push({pos: up,
-                body: parent.body,
-                parent: parent,
-                move: "up"});
-              break;
-            case "down":
-              parent.body.push(down.replace(/,/g, " "));
-              moves.push({pos: down,
-                body: parent.body,
-                parent: parent,
-                move: "down"});
-              break;
-            case "left":
-              parent.body.push(left.replace(/,/g, " "));
-              moves.push({pos: left,
-                body: parent.body,
-                parent: parent,
-                move: "left"});
-              break;
-            case "right":
-              parent.body.push(right.replace(/,/g, " "));
-              moves.push({pos: right,
-                body: parent.body,
-                parent: parent,
-                move: "right"});
-              break;
-          }
-          break;
-      }
-      parent.body.shift();
-    }
-    return moves;
-  },
-
-  computeRandomNextMove: function(){
-    //this.getOptionalMoves({pos: Math.ceil(snake.x/snake.size) + "," + Math.ceil(snake.y/snake.size)});
-    var num = Math.ceil(( Math.random() * this.optionalMoves.length ));
-
-    switch (this.optionalMoves[num - 1]) {
-      case Movement.UP:
-        return "up";
-        break;
-
-      case Movement.DOWN:
-        return "down";
-        break;
-
-      case Movement.LEFT:
-        return "left";
-        break;
-
-      case Movement.RIGHT:
-        return "right";
-        break;
-
-      default:
-        return snake.direction;
-        break;
-    }
-  },
-
-  setFoodLocation: function(x, y){
-    this.locationOfFood[0] = x;
-    this.locationOfFood[1] = y;
-  },
-
-  doMove: function(snake){
-    console.log(this.moveQueue.length);
-    if (this.moveQueue.length !== 0)
-    {
-      snake.direction = this.moveQueue.pop();
-      console.log(snake.direction);
-    }
-    else
-      this.inSearch = false;
-  }
 };
 
 var inverseDirection = {
@@ -673,7 +231,7 @@ function togglePause() {
   } else {
     game.pauseTimer = setTimeout(function() {
       requestAnimationFrame(loop);
-    }, 1000/game.fps);
+    }, 800/game.fps);
     game.paused = false;
   }
 }
@@ -696,6 +254,7 @@ var requestAnimationFrame = window.requestAnimationFrame ||
 
 function loop() {
   if (game.over == false) {
+    //console.log(Math.ceil(snake.x/snake.size) + " " + Math.ceil(snake.y/snake.size));
     game.resetCanvas();
     game.drawScore();
     game.drawGrid();
@@ -715,8 +274,12 @@ function loop() {
           break;
       }
     }
-    ai.doMove(snake);
-    snake.move();
+    if ( ai.inSearch )
+    {
+      ai.doMove(snake);
+      snake.move();
+      console.log("SNAKE : " + snake.getPosition());
+    }
     food.draw();
     snake.draw();
   }
@@ -724,5 +287,5 @@ function loop() {
     game.drawMessage();
   game.pauseTimer = setTimeout(function() {
     requestAnimationFrame(loop);
-  }, 1000/game.fps);
+  }, 800/game.fps);
 }
