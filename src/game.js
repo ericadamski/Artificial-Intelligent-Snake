@@ -2,14 +2,6 @@ var canvas = document.getElementById("the-game");
 var context = canvas.getContext("2d");
 var game, food;
 
-Movement = {
-  UP: 1,
-  DOWN: 2,
-  LEFT: 3,
-  RIGHT: 4,
-  CONTINUE: -1
-}
-
 Array.prototype.compare = function(obj, fn) {
   var i = this.length;
   while (i--) {
@@ -25,13 +17,7 @@ Array.prototype.print = function(fn) {
 }
 
 Array.prototype.contains = function(obj) {
-  var i = this.length;
-  while (i--) {
-    if (this[i] === obj) {
-        return true;
-    }
-  }
-  return false;
+  return this.indexOf(obj) >= 0;
 }
 
 Array.prototype.map = function(fn){
@@ -52,16 +38,10 @@ game = {
   board: null,
   startTime: null,
   timer: null,
-  paused: false,
-  time: 20,
-  pauseTime: null,
 
   start: function() {
     game.over = false;
     game.message = null;
-    game.pauseTimer = null;
-    game.paused = false;
-    game.time = 20;
     game.score = 0;
     game.fps = 8;
     game.board = [];
@@ -80,7 +60,6 @@ game = {
     game.over = true;
     game.message = "GAME OVER - PRESS SPACEBAR";
     clearInterval(game.timer);
-    clearInterval(game.pauseTimer);
   },
 
   drawBox: function(x, y, size, color, fill) {
@@ -144,9 +123,9 @@ game = {
   drawGrid: function() {
     game.board = [];
     var row = col = 0;
-    for(var i = snake.size/2; i < canvas.width; i += snake.size){
+    for(var i = snake.size; i < canvas.width; i += snake.size){
       game.board.push([]);
-      for(var j = snake.size/2; j < canvas.height; j += snake.size){
+      for(var j = snake.size; j < canvas.height; j += snake.size){
         game.drawBox(i,j,snake.size, '#070821', false);
         if(food.x === i && food.y === j){
           game.board[row].push({x: i, y: j, type: 1});
@@ -184,18 +163,17 @@ food = {
 
   set: function() {
     food.size = snake.size;
-    food.x = (Math.ceil(Math.random() * 5) * snake.size * 4) - snake.size / 2;
-    food.y = (Math.ceil(Math.random() * 5) * snake.size * 3) - snake.size / 2;
+    food.x = (Math.ceil(Math.random() * 5) * snake.size * 4) - snake.size;
+    food.y = (Math.ceil(Math.random() * 5) * snake.size * 3) - snake.size;
   },
 
   draw: function() {
     game.drawBox(food.x, food.y, food.size, food.color, true);
-    game.printGrid();
+    //game.printGrid();
   },
 
   getPosition: function() {
-    return [Math.ceil(food.x/snake.size),
-            Math.ceil(food.y/snake.size)];
+    return [Math.ceil(food.x/snake.size), Math.ceil(food.y/snake.size)];
   }
 
 };
@@ -224,18 +202,6 @@ function getKey(value){
   return null;
 }
 
-function togglePause() {
-  if (!game.paused){
-    clearInterval(game.pauseTimer);
-    game.paused = true;
-  } else {
-    game.pauseTimer = setTimeout(function() {
-      requestAnimationFrame(loop);
-    }, 800/game.fps);
-    game.paused = false;
-  }
-}
-
 addEventListener("keydown", function (e) {
   var lastKey = getKey(e.keyCode);
   if (['up', 'down', 'left', 'right'].indexOf(lastKey) >= 0
@@ -243,8 +209,6 @@ addEventListener("keydown", function (e) {
     snake.direction = lastKey;
   } else if (['start_game'].indexOf(lastKey) >= 0 && game.over) {
     game.start();
-  } else if (['start_game'].indexOf(lastKey) >= 0 && !game.over) {
-    togglePause();
   }
 }, false);
 
@@ -252,8 +216,10 @@ var requestAnimationFrame = window.requestAnimationFrame ||
                             window.webkitRequestAnimationFrame ||
                             window.mozRequestAnimationFrame;
 
-function loop() {
-  if (game.over == false) {
+function loop()
+{
+  if (game.over == false)
+  {
     //console.log(Math.ceil(snake.x/snake.size) + " " + Math.ceil(snake.y/snake.size));
     game.resetCanvas();
     game.drawScore();
@@ -274,7 +240,7 @@ function loop() {
           break;
       }
     }
-    if ( ai.inSearch )
+    else
     {
       ai.doMove(snake);
       snake.move();
@@ -285,7 +251,10 @@ function loop() {
   }
   else
     game.drawMessage();
-  game.pauseTimer = setTimeout(function() {
+
+  setTimeout(function() {
     requestAnimationFrame(loop);
-  }, 800/game.fps);
+  }, 1000/game.fps);
 }
+
+requestAnimationFrame(loop);

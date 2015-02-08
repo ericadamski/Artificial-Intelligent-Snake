@@ -1,8 +1,9 @@
 var canvas = document.getElementById("the-game");
 var context = canvas.getContext("2d");
+var GRID_SIZE = 20;
 
 snake = {
-  size: canvas.width / 20,
+  size: canvas.width / GRID_SIZE,
   x: null,
   y: null,
   color: '#09c72b',
@@ -12,8 +13,8 @@ snake = {
   init: function() {
     snake.sections = [];
     snake.direction = 'left';
-    snake.x = canvas.width / 2 + snake.size / 2;
-    snake.y = canvas.height / 2 + snake.size / 2;
+    snake.x = canvas.width / 2 + snake.size;
+    snake.y = canvas.height / 2 + snake.size;
     for (var i = snake.x + (5 * snake.size); i >= snake.x; i -= snake.size) {
       snake.sections.push(i + ',' + snake.y);
     }
@@ -59,10 +60,10 @@ snake = {
   },
 
   isCollision: function(x, y) {
-    if (x < snake.size / 2 ||
-        x > canvas.width ||
-        y < snake.size / 2 ||
-        y > canvas.height ||
+    if (x < game.board[0][0].x ||
+        x > game.board[18][0].x ||
+        y < game.board[0][0].y ||
+        y > game.board[0][18].y ||
         snake.sections.indexOf(x + ',' + y) >= 0)
       return true;
   },
