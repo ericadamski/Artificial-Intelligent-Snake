@@ -244,7 +244,7 @@ function loop()
     {
       ai.doMove(snake);
       snake.move();
-      console.log("SNAKE : " + snake.getPosition());
+      //console.log("SNAKE : " + snake.getPosition());
     }
     food.draw();
     snake.draw();

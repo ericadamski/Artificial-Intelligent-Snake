@@ -44,24 +44,19 @@ ai = {
 
       if (this.atFood(current))
       {
-        console.log(current);
         console.log('success'); //success
+        console.log(current);
         //build reverse tree
+        var curParent = current.parent;
         //this.addMove(current.move);
-        if ( current.parent !== undefined )
+        while (curParent)
         {
-          var curParent = current.parent;
-          while (curParent)
-          {
-            if ( curParent.parent !== undefined ) this.addMove(curParent.move);
-            console.log(curParent);
-            curParent = curParent.parent;
-          }
+          if ( curParent.parent !== undefined ) this.addMove(curParent.move);
+          curParent = curParent.parent;
         }
-        else
-          this.addMove(current.move);
-
-        console.log(current.body);
+        if (this.moveQueue.length === 1)
+          this.moveQueue.push(current.move);
+        console.log(this.moveQueue);
         return true;
       }
       else
@@ -109,7 +104,7 @@ ai = {
     var upWall    = (y - 1) < 1;
     var downWall  = (y + 1) > 19;
 
-    console.log("walls (left right up down) : (" + leftWall + " " + rightWall + " " + upWall + " " + downWall + ")");
+    //console.log("walls (left right up down) : (" + leftWall + " " + rightWall + " " + upWall + " " + downWall + ")");
 
     this.optionalMoves = [];
     switch (parent.move){
@@ -162,10 +157,10 @@ ai = {
 
     var newbody = parent.body.slice();
 
-    console.log(this.optionalMoves);
+    //console.log(this.optionalMoves);
 
-    console.log(" x : " + x + " y : " + y);
-    console.log("Body : " + newbody);
+    //console.log(" x : " + x + " y : " + y);
+    //console.log("Body : " + newbody);
 
     var left   = (x - 1) + " " + y;
     var right  = (x + 1) + " " + y;
@@ -287,7 +282,7 @@ ai = {
   },
 
   doMove: function(snake){
-    console.log(this.moveQueue);
+    //console.log(this.moveQueue);
     if (this.moveQueue.length !== 0)
       snake.direction = this.moveQueue.shift();
     else
@@ -303,7 +298,7 @@ ai = {
     var foX = fo[0];
     var foY = fo[1];
 
-    //console.log("Food is at : " + foX + " " + foY);
+    console.log("Food is at : " + foX + " " + foY);
 
     return (x === foX && y === foY);
   }
