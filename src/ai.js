@@ -13,6 +13,13 @@ ai = {
   optionalMoves: [],
   inSearch: false,
 
+  comparePosition: function(a, b) {
+    if( a.pos === undefined || b.pos === undefined )
+      return false;
+    else
+      return a.pos === b.pos;
+  },
+
   init: function(){
     this.inSearch = false;
     this.moveQueue = [];
@@ -24,6 +31,58 @@ ai = {
   },
 
   DFS: function() {
+    var open = [],
+        closed = [];
+
+    open.push({pos: Math.ceil(Math.floor(snake.x)/snake.size) + " " +
+      Math.ceil(Math.floor(snake.y)/snake.size),
+      body: snake.getPosition(),
+      parent: undefined,
+      move: snake.direction});
+    this.inSearch = true;
+
+    while (open.length > 0)
+    {
+      var current = open.shift();
+
+      if (this.atFood(current))
+      {
+        console.log("success");
+        var curParent = current.parent;
+        while (curParent)
+        {
+          if ( curParent.parent !== undefined )
+            this.addMove(curParent.move);
+          curParent = curParent.parent;
+        }
+        console.log(food);
+        var co = current.parent.pos.split(" ");
+        var x = co[0],
+            y = co[1];
+        var fo = food.getPosition();
+
+        if ( Math.abs(x - fo[0]) === 1 || Math.abs(y - fo[1]) === 1 )
+          this.moveQueue.push(current.move);
+
+        console.log(current.parent);
+        return true;
+      }
+      else
+      {
+        closed.push(current);
+        this.getOptionalMoves(current);
+        var nxtMoves = this.computeNextMoveCoordinates(current);
+
+        for (var i = 0; i < nxtMoves.length; i++)
+        {
+          if( !open.compare(nxtMoves[i], this.comparePosition) &&
+              !closed.compare(nxtMoves[i], this.comparePosition) )
+            open.unshift(nxtMoves[i]);
+        }
+      }
+    }
+    console.log("failure");
+    return false;
   },
 
   BFS: function() {
@@ -48,7 +107,6 @@ ai = {
         console.log(current);
         //build reverse tree
         var curParent = current.parent;
-        //this.addMove(current.move);
         while (curParent)
         {
           if ( curParent.parent !== undefined ) this.addMove(curParent.move);
@@ -56,7 +114,6 @@ ai = {
         }
         if (this.moveQueue.length === 1)
           this.moveQueue.push(current.move);
-        console.log(this.moveQueue);
         return true;
       }
       else
@@ -65,17 +122,10 @@ ai = {
         this.getOptionalMoves(current);
         var nxtMoves = this.computeNextMoveCoordinates(current);
 
-        var comparePosition = function(a, b) {
-          if( a.pos === undefined || b.pos === undefined )
-            return false;
-          else
-            return a.pos === b.pos;
-        }
-
         for(var i = 0; i < nxtMoves.length; i++)
         {
-          if( !open.compare(nxtMoves[i], comparePosition) &&
-              !closed.compare(nxtMoves[i], comparePosition) )
+          if( !open.compare(nxtMoves[i], this.comparePosition) &&
+              !closed.compare(nxtMoves[i], this.comparePosition) )
             open.push(nxtMoves[i]);
         }
       }
@@ -282,8 +332,7 @@ ai = {
   },
 
   doMove: function(snake){
-    //console.log(this.moveQueue);
-    if (this.moveQueue.length !== 0)
+    if (this.moveQueue.length > 0)
       snake.direction = this.moveQueue.shift();
     else
       this.inSearch = false;
