@@ -44,6 +44,23 @@ ai = {
     this.moveQueue.unshift(move);
   },
 
+  predictMove: function(move, coords){
+    switch(move)
+    {
+      case "up":
+        return coords.x + " " + (coords.y - 1);
+
+      case "down":
+        return coords.x + " " + (coords.y + 1);
+
+      case "left":
+        return (coords.x - 1) + " " + coords.y;
+
+      case "right":
+        return (coords.x + 1) + " " + coords.y;
+    }
+  },
+
   AStar: function() {
     var open = new PriorityQueue({ comparator: function(a, b){
       if (a.heuristicValue !== undefined && b.heruisticValue !== undefined)
@@ -90,7 +107,10 @@ ai = {
             y = co[1];
         var fo = food.getPosition();
 
-        this.moveQueue.push(current.move);
+        // if the food is one away from the body
+        // or against the wall do
+        if( !(x === fo[0] || y === fo[1]) )
+          this.moveQueue.push(current.move);
 
         //console.log(current.parent);
         return true;
