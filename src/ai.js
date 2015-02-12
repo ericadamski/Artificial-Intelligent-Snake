@@ -8,7 +8,8 @@ Movement = {
   CONTINUE: -1
 }
 
-function lineDistance( a, b )
+//heuristic 1
+function lineDistance(a, b)
 {
   var xs = 0,
       ys = 0;
@@ -21,6 +22,12 @@ function lineDistance( a, b )
 
   return Math.sqrt( xs + ys );
 }
+
+//heuristic 2
+
+//avg heuristic 1 and 2
+function heuristicAverage(a, b)
+{ }//return (lineDistance(a, b) + otherheuristic(a, b))/ 2; }
 
 ai = {
   moveQueue: [],
@@ -44,27 +51,10 @@ ai = {
     this.moveQueue.unshift(move);
   },
 
-  predictMove: function(move, coords){
-    switch(move)
-    {
-      case "up":
-        return coords.x + " " + (coords.y - 1);
-
-      case "down":
-        return coords.x + " " + (coords.y + 1);
-
-      case "left":
-        return (coords.x - 1) + " " + coords.y;
-
-      case "right":
-        return (coords.x + 1) + " " + coords.y;
-    }
-  },
-
   AStar: function() {
     var open = new PriorityQueue({ comparator: function(a, b){
-      if (a.heuristicValue !== undefined && b.heruisticValue !== undefined)
-        return b.heuristicValue - a.heuristicValue;
+      if (a.cost !== undefined && b.cost !== undefined)
+        return a.cost - b.cost;
       return 0;
     }}),
        closed = [];
@@ -79,13 +69,11 @@ ai = {
       pos: snakePos[0] + " " + snakePos[1],
       body: snake.getPosition(),
       parent: undefined,
-      heuristicValue: lineDistance({x: foodPos[0], y: foodPos[1]},
+      cost: pathLength + lineDistance({x: foodPos[0], y: foodPos[1]},
         {x: snakePos[0], y: snakePos[1]}),
       move: snake.direction,
       path: pathLength});
     this.inSearch = true;
-
-    //console.log(open);
 
     while (open.length > 0)
     {
@@ -101,18 +89,18 @@ ai = {
             this.addMove(curParent.move);
           curParent = curParent.parent;
         }
-        //console.log(food);
+
         var co = current.parent.pos.split(" ");
         var x = co[0],
             y = co[1];
         var fo = food.getPosition();
 
-        // if the food is one away from the body
-        // or against the wall do
         if( !(x === fo[0] || y === fo[1]) )
-          this.moveQueue.push(current.move);
+        {
+          if( x < 19 && current.move !== "right" )
+            this.moveQueue.push(current.move);
+        }
 
-        //console.log(current.parent);
         return true;
       }
       else
@@ -135,7 +123,7 @@ ai = {
           if ( onOpen === undefined && onClosed === undefined )
           {
             //assign heuristic value
-            child.heuristicValue = lineDistance({x: childX, y: childY},
+            child.cost = pathLength + lineDistance({x: childX, y: childY},
               {x: foodPos[0], y: foodPos[1]});
             child.path = pathLength;
             // add child to open
@@ -288,17 +276,11 @@ ai = {
     var right = (x + 1) + " " + y;
     var up    = x + " " + (y - 1);
     var down  = x + " " + (y + 1);
-    /*
-    console.log("Going: " + parent.move + " x : " + x + " y : " + y);
-    console.log("Body : " + positions);
-    console.log("Left: " + left + " Right: " + right + " up : " + up + " down: " + down);
-    */
+
     var leftWall  = (x - 1) < 1;
     var rightWall = (x + 1) > 19;
     var upWall    = (y - 1) < 1;
     var downWall  = (y + 1) > 19;
-
-    //console.log("walls (left right up down) : (" + leftWall + " " + rightWall + " " + upWall + " " + downWall + ")");
 
     this.optionalMoves = [];
     switch (parent.move){
@@ -350,11 +332,6 @@ ai = {
     var y = parseInt(par[1]);
 
     var newbody = parent.body.slice();
-
-    //console.log(this.optionalMoves);
-
-    //console.log(" x : " + x + " y : " + y);
-    //console.log("Body : " + newbody);
 
     var left   = (x - 1) + " " + y;
     var right  = (x + 1) + " " + y;
