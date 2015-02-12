@@ -95,11 +95,8 @@ ai = {
             y = co[1];
         var fo = food.getPosition();
 
-        if( !(x === fo[0] || y === fo[1]) )
-        {
-          if( x < 19 && current.move !== "right" )
-            this.moveQueue.push(current.move);
-        }
+        if( !(x === fo[0] || y === fo[1]) && x < 19 )
+          this.moveQueue.push(current.move);
 
         return true;
       }
