@@ -8,6 +8,20 @@ Movement = {
   CONTINUE: -1
 }
 
+function lineDistance( a, b )
+{
+  var xs = 0,
+      ys = 0;
+
+  xs = b.x - a.x;
+  xs = xs * xs;
+
+  ys = b.y - a.y;
+  ys = ys * ys;
+
+  return Math.sqrt( xs + ys );
+}
+
 ai = {
   moveQueue: [],
   optionalMoves: [],
@@ -28,6 +42,116 @@ ai = {
 
   addMove: function(move){
     this.moveQueue.unshift(move);
+  },
+
+  AStar: function() {
+    var open = new PriorityQueue({ comparator: function(a, b){
+      if (a.heuristicValue !== undefined && b.heruisticValue !== undefined)
+        return b.heuristicValue - a.heuristicValue;
+      return 0;
+    }}),
+       closed = [];
+
+    var foodPos = food.getPosition(),
+        snakePos = [Math.ceil(Math.floor(snake.x)/snake.size),
+          Math.ceil(Math.floor(snake.y)/snake.size)];
+
+    var pathLength = 0;
+
+    open.queue({
+      pos: snakePos[0] + " " + snakePos[1],
+      body: snake.getPosition(),
+      parent: undefined,
+      heuristicValue: lineDistance({x: foodPos[0], y: foodPos[1]},
+        {x: snakePos[0], y: snakePos[1]}),
+      move: snake.direction,
+      path: pathLength});
+    this.inSearch = true;
+
+    //console.log(open);
+
+    while (open.length > 0)
+    {
+      var current = open.dequeue();
+
+      if( this.atFood(current) )
+      {
+        console.log("success");
+        var curParent = current.parent;
+        while (curParent)
+        {
+          if ( curParent.parent !== undefined )
+            this.addMove(curParent.move);
+          curParent = curParent.parent;
+        }
+        //console.log(food);
+        var co = current.parent.pos.split(" ");
+        var x = co[0],
+            y = co[1];
+        var fo = food.getPosition();
+
+        this.moveQueue.push(current.move);
+
+        //console.log(current.parent);
+        return true;
+      }
+      else
+      {
+        ++pathLength;
+        //get children
+        this.getOptionalMoves(current);
+        var nxtMoves = this.computeNextMoveCoordinates(current);
+        //foreach child DO
+        for(var i = 0; i < nxtMoves.length; i++)
+        {
+          var child    = nxtMoves[i],
+              childPos = child.pos.split(" ");
+              childX   = childPos[0],
+              childY   = childPos[1];
+
+          var onOpen = open.priv.data.getCompare(child, this.comparePosition),
+              onClosed = closed.getCompare(child, this.comparePosition);
+
+          if ( onOpen === undefined && onClosed === undefined )
+          {
+            //assign heuristic value
+            child.heuristicValue = lineDistance({x: childX, y: childY},
+              {x: foodPos[0], y: foodPos[1]});
+            child.path = pathLength;
+            // add child to open
+            open.queue(child);
+          }
+          // if the child is already on open
+          else if (onOpen !== undefined)
+          {
+            //console.log(onOpen);
+            // child was reached by shorter path
+            if ( onOpen.path > child.path )
+            {
+              // give the state on open the shorter path value
+              open.priv.data[open.priv.data.indexOf(onOpen)].path = child.path;
+            }
+          }
+          // the child is already on closed
+          else if (onClosed !== undefined)
+          {
+            //console.log(onClosed);
+            // if the child was reached by a shorter path
+            if( onClosed.path > child.path )
+            {
+              // remove it from closed and put it in open
+              closed.splice(closed.indexOf(onClosed), 1);
+              open.queue(child);
+            }
+          }
+        }
+        // put the current on closed
+        closed.push(current);
+        // reorder (should be done automatically)
+      }
+    }
+    console.log("Failed");
+    return false;
   },
 
   DFS: function() {
@@ -55,7 +179,7 @@ ai = {
             this.addMove(curParent.move);
           curParent = curParent.parent;
         }
-        console.log(food);
+        //console.log(food);
         var co = current.parent.pos.split(" ");
         var x = co[0],
             y = co[1];
@@ -64,7 +188,7 @@ ai = {
         if ( Math.abs(x - fo[0]) === 1 || Math.abs(y - fo[1]) === 1 )
           this.moveQueue.push(current.move);
 
-        console.log(current.parent);
+        //console.log(current.parent);
         return true;
       }
       else
@@ -104,7 +228,7 @@ ai = {
       if (this.atFood(current))
       {
         console.log('success'); //success
-        console.log(current);
+        //console.log(current);
         //build reverse tree
         var curParent = current.parent;
         while (curParent)
@@ -347,7 +471,7 @@ ai = {
     var foX = fo[0];
     var foY = fo[1];
 
-    console.log("Food is at : " + foX + " " + foY);
+    //console.log("Food is at : " + foX + " " + foY);
 
     return (x === foX && y === foY);
   }

@@ -11,6 +11,15 @@ Array.prototype.compare = function(obj, fn) {
   return false
 }
 
+Array.prototype.getCompare = function(obj, fn) {
+  var i = this.length;
+  while (i--) {
+    if (fn(this[i], obj))
+      return this[i];
+  }
+  return undefined;
+}
+
 Array.prototype.print = function(fn) {
   var i = this.length;
   while (i--) fn(i,this[i]);
@@ -237,6 +246,7 @@ function loop()
           break;
 
         case 'A*':
+          ai.AStar();
           break;
       }
     }
@@ -253,7 +263,7 @@ function loop()
 
   setTimeout(function() {
     requestAnimationFrame(loop);
-  }, 1000/game.fps);
+  }, 10/game.fps);
 }
 
 requestAnimationFrame(loop);
