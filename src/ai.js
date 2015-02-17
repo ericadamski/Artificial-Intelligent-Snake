@@ -24,10 +24,23 @@ function lineDistance(a, b)
 }
 
 //heuristic 2
+function inverseLineDistance(a, b)
+{
+  var xs = 0,
+      ys = 0;
+
+  xs = a.x - b.x;
+  xs = xs * xs;
+
+  ys = a.y - b.y;
+  ys = ys * ys;
+
+  return Math.sqrt( xs + ys );
+}
 
 //avg heuristic 1 and 2
 function heuristicAverage(a, b)
-{ }//return (lineDistance(a, b) + otherheuristic(a, b))/ 2; }
+{ return (lineDistance(a, b) + inverseLineDistance(a, b))/ 2; }
 
 ai = {
   moveQueue: [],
@@ -51,7 +64,25 @@ ai = {
     this.moveQueue.unshift(move);
   },
 
-  AStar: function() {
+  getHeuristic: function(index) {
+    switch(index)
+    {
+      case 0:
+        //console.log("LineDist");
+        return lineDistance;
+
+      case 1:
+        //console.log("1/LineDist");
+        return inverseLineDistance;
+
+      case 2:
+        //console.log("Avg");
+        return heuristicAverage;
+    }
+  },
+
+  AStar: function(heuristicType) {
+    var heuristic = this.getHeuristic(heuristicType);
     var open = new PriorityQueue({ comparator: function(a, b){
       if (a.cost !== undefined && b.cost !== undefined)
         return a.cost - b.cost;
@@ -69,7 +100,7 @@ ai = {
       pos: snakePos[0] + " " + snakePos[1],
       body: snake.getPosition(),
       parent: undefined,
-      cost: pathLength + lineDistance({x: foodPos[0], y: foodPos[1]},
+      cost: pathLength + heuristic({x: foodPos[0], y: foodPos[1]},
         {x: snakePos[0], y: snakePos[1]}),
       move: snake.direction,
       path: pathLength});
@@ -83,21 +114,14 @@ ai = {
       {
         console.log("success");
         var curParent = current.parent;
+        if( current.pos.split(" ")[0] !== 19 && current.move !== "right" )
+          this.addMove(current.move);
         while (curParent)
         {
           if ( curParent.parent !== undefined )
             this.addMove(curParent.move);
           curParent = curParent.parent;
         }
-
-        var co = current.parent.pos.split(" ");
-        var x = co[0],
-            y = co[1];
-        var fo = food.getPosition();
-
-        if( !(x === fo[0] || y === fo[1]) && x < 19 )
-          this.moveQueue.push(current.move);
-
         return true;
       }
       else
@@ -120,7 +144,7 @@ ai = {
           if ( onOpen === undefined && onClosed === undefined )
           {
             //assign heuristic value
-            child.cost = pathLength + lineDistance({x: childX, y: childY},
+            child.cost = pathLength + heuristic({x: childX, y: childY},
               {x: foodPos[0], y: foodPos[1]});
             child.path = pathLength;
             // add child to open
@@ -129,7 +153,6 @@ ai = {
           // if the child is already on open
           else if (onOpen !== undefined)
           {
-            //console.log(onOpen);
             // child was reached by shorter path
             if ( onOpen.path > child.path )
             {
@@ -140,7 +163,6 @@ ai = {
           // the child is already on closed
           else if (onClosed !== undefined)
           {
-            //console.log(onClosed);
             // if the child was reached by a shorter path
             if( onClosed.path > child.path )
             {
@@ -184,7 +206,6 @@ ai = {
             this.addMove(curParent.move);
           curParent = curParent.parent;
         }
-        //console.log(food);
         var co = current.parent.pos.split(" ");
         var x = co[0],
             y = co[1];
@@ -193,7 +214,6 @@ ai = {
         if ( Math.abs(x - fo[0]) === 1 || Math.abs(y - fo[1]) === 1 )
           this.moveQueue.push(current.move);
 
-        //console.log(current.parent);
         return true;
       }
       else
@@ -233,16 +253,15 @@ ai = {
       if (this.atFood(current))
       {
         console.log('success'); //success
-        //console.log(current);
         //build reverse tree
         var curParent = current.parent;
+        if( current.pos.split(" ")[0] !== 19 && current.move !== "right" )
+          this.addMove(current.move);
         while (curParent)
         {
           if ( curParent.parent !== undefined ) this.addMove(curParent.move);
           curParent = curParent.parent;
         }
-        if (this.moveQueue.length === 1)
-          this.moveQueue.push(current.move);
         return true;
       }
       else
@@ -464,8 +483,6 @@ ai = {
     var fo  = food.getPosition();
     var foX = fo[0];
     var foY = fo[1];
-
-    //console.log("Food is at : " + foX + " " + foY);
 
     return (x === foX && y === foY);
   }

@@ -107,6 +107,33 @@ game = {
     if (isAStar) return "A*";
   },
 
+  drawHeuristic: function() {
+    if (game.getSearch() === "A*" &&
+        document.getElementById('Select-Box') === null)
+    {
+      var search = document.getElementById('search');
+
+      var select = document.createElement("select");
+      select.id = "Select-Box";
+      var opH1 = document.createElement("option");
+      opH1.innerHTML = "Heuristic 1";
+      var opH2 = document.createElement("option");
+      opH2.innerHTML = "Heuristic 2";
+      var opH3 = document.createElement("option");
+      opH3.innerHTML = "Average of Heuristic 1 and 2";
+      select.appendChild(opH1);
+      select.appendChild(opH2);
+      select.appendChild(opH3);
+      search.appendChild(select);
+    }
+    else if ( game.getSearch() !== "A*" &&
+              document.getElementById('Select-Box') !== null)
+    {
+      document.getElementById('search')
+        .removeChild(document.getElementById('Select-Box'));
+    }
+  },
+
   drawTime: function(min, sec) {
       var element = document.getElementById("time");
       element.style.textAlign = 'center';
@@ -233,6 +260,7 @@ function loop()
     game.resetCanvas();
     game.drawScore();
     game.drawGrid();
+    game.drawHeuristic();
     if( !ai.inSearch )
     {
       switch(game.getSearch())
@@ -246,7 +274,7 @@ function loop()
           break;
 
         case 'A*':
-          ai.AStar();
+          ai.AStar(document.getElementById('Select-Box').selectedIndex);
           break;
       }
     }
