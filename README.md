@@ -1,5 +1,12 @@
 # AI Snake Game
-> in development
+### State-Space Search Algorithms Used
+- Blind Search
+  - Breadth-First Search
+  - Depth-First Search
+- Heuristic Search
+  - A* Search with two heuristics :
+    - Euclidean Distance
+    - Taxicab Distance
 
 
 #### Original Snake Game Code Taken From :

@@ -24,23 +24,20 @@ function lineDistance(a, b)
 }
 
 //heuristic 2
-function inverseLineDistance(a, b)
+function TaxicabDistance(a, b)
 {
   var xs = 0,
       ys = 0;
 
-  xs = a.x - b.x;
-  xs = xs * xs;
+  xs = Math.abs(a.x - b.x);
+  ys = Math.abs(a.y - b.y);
 
-  ys = a.y - b.y;
-  ys = ys * ys;
-
-  return Math.sqrt( xs + ys );
+  return xs + ys;
 }
 
 //avg heuristic 1 and 2
 function heuristicAverage(a, b)
-{ return (lineDistance(a, b) + inverseLineDistance(a, b))/ 2; }
+{ return (lineDistance(a, b) + TaxicabDistance(a, b))/ 2; }
 
 ai = {
   moveQueue: [],
@@ -72,8 +69,8 @@ ai = {
         return lineDistance;
 
       case 1:
-        //console.log("1/LineDist");
-        return inverseLineDistance;
+        //console.log("TaxicabDistance");
+        return TaxicabDistance;
 
       case 2:
         //console.log("Avg");
