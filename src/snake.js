@@ -87,8 +87,9 @@ snake = {
       }
       food.set();
     } else {
-      snake.sections.shift();
+      //snake.sections.shift();
     }
+    snake.sections.shift();
   }
 
 };
